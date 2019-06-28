@@ -1,0 +1,43 @@
+Package: Nigeriamsna
+Title: A grammar of hypothesis test driven analysis for the NIgeria 2019 MSNA
+Version: 0.0.0.9000
+Authors@R: person("Eliora", "Henzler", email = "eliora.henzler@impact-initiatives.org", role = c("aut", "cre"))
+Description: 
+Depends: 
+    R (>= 3.5.2),
+    survey,
+    magrittr,
+    ggplot2,
+    ggthemes,
+    tidyr,
+    crayon
+Imports:
+    dplyr,
+    reshape2,
+    questionr,
+    koboquest (>= 1.0.1),
+    kobostandards,
+    xlsformfill,
+    data.table,
+    surveyweights (>= 0.1.0),
+    knitr,
+    htmltools,
+    assertthat,
+    hypegrammaR (>= 0.0.0.9000),
+    visualisationIMPACT (>= 0.1.0),
+    composr (>= 0.1.1)
+Remotes:  
+    github::mabafaba/koboquest,
+    github::mabafaba/kobostandards,
+    sharonorengo/visualisationIMPACT,
+    mabafaba/composr,
+    ellieallien/surveyweights,
+    mabafaba/koboquest
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.1.1
+Suggests: 
+    testthat,
+    rmarkdown
+VignetteBuilder: knitr
