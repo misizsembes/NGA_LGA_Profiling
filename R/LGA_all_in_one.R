@@ -1,9 +1,14 @@
 #SET WORKING DIRECTORY
-setwd("~/Desktop/Nigeria/LGA_Profiling")
+setwd("~/Desktop/Nigeria/LGA_Profiling/REVISED_PROCESS/LGA_Profiling")  #DO NOT CHANGE
 options(scipen = 999)
 #####LOAD DATA#####
-excel_file_name <- "nga_lga_profiling_phase2_household_survey_final_ANONYMISED_v2.xlsx"
-excel_sheet_name <- "nga_lga_profiling_phase2_hh_yn"
+data_path <- "Raw_to_Cleaning_Process/Raw_Data/updated_data" #DO NOT CHANGE
+file_type <- "CSV"  #  "CSV" OR "EXCEL"
+file_name <- "UPDATED_CLEANED_DATA_2019-07-05_nga_lga_profiling_phase2_household_survey_final_ANONYMISED_v2_nga_lga_profiling_phase2_hh"
+excel_sheet_name <- "nga_lga_profiling_phase2_hh_yn"  # ONLY IF "file_type" IS EXCEL--OTHERWISE IGNORE
+
+#EXPORT FOLDER
+output_folder <- "Analysis"
 
 #####LOAD PACKAGES#####
 if (!require(readxl)) install.packages('readxl')
@@ -244,7 +249,7 @@ moveme <- function (invec, movecommand) {
   myVec
 }
 
-######INDICATOR SUMMARY 2.0: UNWEIGHTED: Use inside a loop over a whole dataset
+######INDICATOR SUMMARY 3.0: UNWEIGHTED: Use inside a loop over a whole dataset
 #dataa == dataset with indicators to aggregate
 #agg_varble == IN QUOTATIONS: The name of the aggregation variable in the dataset
 #i == Column index inside the dataset
@@ -265,7 +270,7 @@ indicator_summary3 <- function(dataa,agg_varble, i, pop_group_var){
   agg_and_var <- c(agg_varble, var_name)
   agg_varble_index <- grep(paste0("^",agg_varble,"$"), colnames(dataa))
   agg_pop_group <- as.data.frame(str_split_fixed(unique(paste0( unlist(dataa[[grep(paste0("^",agg_varble,"$"), colnames(dataa))]]) ,";", unlist(dataa[[grep(paste0("^",pop_group_var,"$"), colnames(dataa))]]))),";",2))
-  if(all(is.na(dataa[,i]))==TRUE){ #IF COLUMN IS BLANK
+   if(all(is.na(dataa[,i]))==TRUE){ #IF COLUMN IS BLANK
   print("ALL NA")
         aggs <- as.data.frame(agg_pop_group[1])
       pop_group_column <- as.data.frame(agg_pop_group[2])
@@ -403,6 +408,8 @@ if(pop_group_var == "all"){
   }
   return(result)
 }
+trash <- indicator_summary3(profile, "lga",183, "group")
+write.csv(trash,"trash.csv")
 #categorical <- indicator_summary3(profile, "lga",67, "group")
 #NAs <- indicator_summary3(profile, "lga",204, "group")
 #numeric <- indicator_summary3(profile, "lga",13, "group")
@@ -437,28 +444,37 @@ return(dataset_sums)
 ############################SUMMARIZE DEMOGRAPHICS: WIDE FORMAT########################
 #SUBSET DEMOGRAPHIC QUESTIONS
 #datasett  ==  DATASET TO AGGREGATE (DEMOGRAPHICS) (e.g., profile)
-#group == IN QUOTATIONS: POPULATION GROUP/OTHER GROUPING (e.g., "group" )
-#agg_level == IN QUOTATIONS: AGGREGATION VARIABLE (e.g., "lga" )
+#group == IN QUOTATIONS: POPULATION GROUP/OTHER GROUPING (e.g., "group" ) OR "all" (all groups together [no aggregation])
+#agg_level == IN QUOTATIONS: AGGREGATION VARIABLE (e.g., "lga" ) OR "all" (all geographies together [no aggregation])
 #first_demo_indicator ==  IN QUOTATIONS: Column name of the FIRST indicator in the demographic section (e.g., "a_demographics_a_hh_members_a_hh_members_maleinfant")
 #last_demo_indicator == #IN QUOTATIONS: Column name of the LAST indicator in the demographic section (e.g., "a_demographics_a_total_independent")
 #first_pop_group == IN QUOTATIONS: Column name of the FIRST listed population group (e.g., "a_demographics_a_hh_members_a_hh_members_maleinfant)
 #last_pop_group ==  IN QUOTATIONS: Column name of the LAST listed population group (e.g., "a_demographics_a_hh_members_a_hh_members_femaleelder")
-#indicator_kobo_name == IN QUOTATIONS: Prefix of the KoBo section in the column name (for cleaners output headers) (e.g., "a_demographics_a")
 #independent_people == IN QUOTATIONS: Column name of the number of independent people (e.g., a_demographics_a_total_independent)
 #dependent_people == IN QUOTATIONS: Column name of the number of dependent people (e.g., a_demographics_a_total_dependent)
-agg_demographics <- function(datasett,group,agg_level,first_demo_indicator,last_demo_indicator,first_pop_group,last_pop_group,indicator_kobo_name,independent_people,dependent_people){
+agg_demographics <- function(datasett,group,agg_level,first_demo_indicator,last_demo_indicator,first_pop_group,last_pop_group,independent_people,dependent_people){
   ###START###
+  if(agg_level == "all"){
+    datasett$global_agg <- "constant_agg"
+    agg_level <- "global_agg"
+  } else{
+  }
+  if(group == "all"){
+    datasett$global_group <- "constant_group"
+    group <- "global_group"
+  } else {
+  }
   grouping_var <- grep(paste0("^",group,"$"),colnames(datasett))
   aggregation_var <- grep(paste0("^",agg_level,"$"),colnames(datasett))
-  first_demo <- grep(first_demo_indicator,colnames(datasett))
-  last_demo <- grep(last_demo_indicator,colnames(datasett))
+  first_demo <- grep(paste0("^",first_demo_indicator,"$"),colnames(datasett))
+  last_demo <- grep(paste0("^",last_demo_indicator,"$"),colnames(datasett))
   #SAVE ATTRIBUTE FIELDS
   attributes <- datasett[c(aggregation_var,grouping_var)]
   demographics<- sapply( datasett[,first_demo:last_demo], as.numeric )
   demographics<- as.data.frame(demographics)
   demographics[is.na(demographics)] <- 0
   #CALCULATE CORRECT POPULATION SUM COLUMN
-  demographics$tlt_people <- rowSums(demographics[grep(first_pop_group,colnames(demographics)):grep(last_pop_group,colnames(demographics))])
+  demographics$tlt_people <- rowSums(demographics[grep(paste0("^",first_pop_group,"$"),colnames(demographics)):grep(paste0("^",last_pop_group,"$"),colnames(demographics))])
   demographics <- data.frame(attributes,demographics)
   #SELECT ALL DEMOGRAPHIC GROUPS
   agg_demographic <- demographics %>% 
@@ -466,9 +482,12 @@ agg_demographics <- function(datasett,group,agg_level,first_demo_indicator,last_
     group_by_at(c(agg_level,group)) %>%
     summarise_all(funs(sum), na.rm = TRUE)
   #RENAME SUMS
-  names(agg_demographic)[grep(first_demo_indicator,colnames(agg_demographic)):ncol(agg_demographic)] <- paste0("sum_",names(agg_demographic)[grep(first_demo_indicator,colnames(agg_demographic)):ncol(agg_demographic)])
-   #DEPENDENCY RATIO
-  agg_demographic <- agg_demographic %>% mutate(dependency_ratio = get(paste0("sum_",dependent_people))/get(paste0("sum_",independent_people)))
+  names(agg_demographic)[grep(paste0("^",first_demo_indicator,"$"),colnames(agg_demographic)):ncol(agg_demographic)] <- paste0("sum_",names(agg_demographic)[grep(paste0("^",first_demo_indicator,"$"),colnames(agg_demographic)):ncol(agg_demographic)])
+  #DEPENDENCY RATIO
+  if( dependent_people == FALSE | independent_people == FALSE){
+  } else {
+    agg_demographic <- agg_demographic %>% mutate(dependency_ratio = get(paste0("sum_",dependent_people))/get(paste0("sum_",independent_people)))
+  }
   #CREATE DEMOGRAPHIC PROPORTION COMPOSITION
   last_to_be_proportion <- grep(paste0("sum_",last_demo_indicator),colnames(agg_demographic))
   first_demo_tobe_aggregated <- grep(paste0("sum_",first_demo_indicator),colnames(agg_demographic))
@@ -483,9 +502,26 @@ agg_demographics <- function(datasett,group,agg_level,first_demo_indicator,last_
   names(agg_demographic)[(ncol_agg_demo_sums+1):ncol(agg_demographic)] %<>%
     gsub("sum_", "pr_", .) 
   names(agg_demographic) <- names(agg_demographic) %<>%
-    gsub(".1", "", .)  %>%
-    gsub(paste0(indicator_kobo_name,"_"), "", .)  
-  return(agg_demographic)
+    gsub("\\.1", "", .)  
+  ###STACK 
+  last_attribute_index <- grep(group, colnames(agg_demographic))
+  demo_names <- gsub("pr_", "",names(  agg_demographic[1, c(1:last_attribute_index, min( grep("pr_",colnames(agg_demographic))):ncol(agg_demographic))] ))
+  pairz <- list()
+  for(j in 1:nrow(agg_demographic)){
+    percents <- as.data.frame(agg_demographic[j, c(1:last_attribute_index, min( grep("pr_",colnames(agg_demographic))):ncol(agg_demographic))])
+    colnames(percents) <- demo_names
+    sums <- as.data.frame(agg_demographic[j, c(1:last_attribute_index, min( grep("sum_",colnames(agg_demographic))):(min( grep("tlt_people",colnames(agg_demographic)))-1))])
+    colnames(sums) <- demo_names
+    binded <- rbind(sums, percents)
+    pairz[[j]] <- binded
+  }
+   pairz <- ldply(pairz, data.frame)
+   measure <- c("counts","proportions")
+   pairz_unique_aggregation <- paste0(pairz[,1],pairz[,2])
+      measure <- rep(measure, length(unique(pairz_unique_aggregation)))
+    pairz <- cbind(pairz, measure)
+    pairz <-  pairz[moveme(names(pairz), paste("measure", "before", first_demo_indicator, sep=" ") )]
+  return(pairz)
 }
 
 
@@ -516,15 +552,29 @@ data_clean_names<-as.data.frame(datasett)
 return(data_clean_names)
 }
 
-######################BEGIN AGGREGATION######################
-profile <- read_excel(excel_file_name,sheet = excel_sheet_name)
+######################BEGIN AGGREGATION: DO NOT TOUCH######################
+if(file_type == "CSV"){
+  profile <-  read_csv(paste0(data_path,"/",file_name,".csv"))
+  profile[1]<-NULL   
+} else if(file_type == "EXCEL"){
+  profile <- read_excel(paste0(data_path,"/",file_name,".xlsx"),sheet = excel_sheet_name)
+}
 profile <- remove_special_char_colnames(profile)  #REMOVE SPECIAL CHARACTERS FROM COLUMN HEADERS
-lga_profile_aggregated <- loop_over_dataset(profile,"b_movement_intentions_b_move_plans","j_needs_j_needs3_other","lga", "group")
-agged_demos <- agg_demographics(profile, "group" ,"lga" , 
+###BEGIN ANALYSIS
+lga_profile_aggregated <- loop_over_dataset(profile,"b_movement_intentions_b_move_plans",
+                                            "j_needs_j_needs3_other",
+                                            "lga", 
+                                            "group")
+write.csv(lga_profile_aggregated,paste0(output_folder,"/","lga_profile_aggregated.csv"))
+
+###BEGIN DEMOGRAPHICS
+agged_demos <- agg_demographics(profile, "lga" ,"all" , 
                                 "a_demographics_a_hh_members_a_hh_members_maleinfant" , 
                                 "a_demographics_a_total_independent", 
                                 "a_demographics_a_hh_members_a_hh_members_maleinfant",
                                 "a_demographics_a_hh_members_a_hh_members_femaleelder",
-                                "a_demographics_a",
                                 "a_demographics_a_total_independent" ,
                                 "a_demographics_a_total_dependent")
+write.csv(agged_demos,paste0(output_folder,"/","agged_demos.csv"))
+
+
